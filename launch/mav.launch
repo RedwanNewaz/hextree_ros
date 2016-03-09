@@ -1,0 +1,9 @@
+<launch>
+<!-- <master auto="start"/> -->
+<include file="$(find ORB_SLAM)/ORB_redwan.launch" />
+<include file="sensor_fusion2.launch" />
+<include file="ardrone_driver.launch" />
+
+<!-- <include file="$(find octomap_server)/launch/redwan.launch" /> -->
+<!-- <node pkg="mini_mav" type="quad_gui" name="mavStateController"/> -->
+</launch>
