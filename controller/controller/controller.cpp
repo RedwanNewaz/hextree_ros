@@ -99,9 +99,9 @@ void controller::run(const ros::TimerEvent& e){
 void controller::stateUpdate(const vector<double>& tmsg){
 
 mutex.lock();
-     if(tmsg.size()<STATE_SIZE)debugger("controller Error in state update");
+     if(tmsg.size()<STATE_SIZE)
+        debugger("controller Error in state update");
      std::copy(tmsg.begin(), tmsg.end(), state);
-//     //ROS_INFO("state_update %f %f", state[0],state[1]);
      state_update=true;
 mutex.unlock();
 

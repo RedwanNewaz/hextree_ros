@@ -105,7 +105,7 @@ void display::ukf_transformer( std::vector<double>robot_pose){
 
 
     debug_posi.data=debug_pose.str();
-    debugger_pub.publish(debug_posi);
+    //debugger_pub.publish(debug_posi);
 
 
 }

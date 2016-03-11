@@ -31,25 +31,7 @@ private slots:
 
     void on_buttonLand_clicked();
 
-    void on_pushButton_clicked();
 
-
-
-    void on_rollKp_sliderMoved(int action);
-
-    void on_rollKd_sliderMoved(int action);
-
-    void on_pitchKp_sliderMoved(int action);
-
-    void on_pitchKd_sliderMoved(int action);
-
-    void on_altKp_sliderMoved(int action);
-
-    void on_altKd_sliderMoved(int action);
-
-    void on_YawKp_sliderMoved(int action);
-
-    void on_YawKd_sliderMoved(int action);
 
     void timeChanged();
     void sub_write(const QImage &frame);
@@ -59,7 +41,6 @@ private slots:
 
 
 
-    void on_pushButton_2_clicked();
 
     void on_button_motion_clicked();
 
@@ -86,7 +67,7 @@ private:
     ros_launch *sensor_subs;
     QStringList topicList,executionList;
     QProcess *process,*process_action;
-    ros::ServiceClient client,test_obs_clinet,calibration_client;
+    ros::ServiceClient robot_client,client,test_obs_clinet,calibration_client;
     ros::ServiceClient plannerclient;
     ros::NodeHandle n;
 
@@ -126,7 +107,7 @@ protected:
 
     void cameraInit();
     void EnableSubscriber();
-    void posi_display(QString);
+    void posi_display();
 
 };
 

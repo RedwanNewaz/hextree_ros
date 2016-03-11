@@ -42,6 +42,7 @@ void ros_thread::goalPub(QPointF msg){
     cmdT.linear.x =-msg.x();
     cmdT.linear.y =-msg.y();
 
+
      mutex.lock();
         goal_pub.publish(cmdT);
      mutex.unlock();

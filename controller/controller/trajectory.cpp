@@ -51,7 +51,7 @@ void trajectory::modeSelction(int i){
    switch (i)
    {
        case 1:{//P2p
-          memory_allocate(4);
+          memory_allocate(1);
           update_parameters(0, 1);
        break;}
 
@@ -70,11 +70,11 @@ void trajectory::modeSelction(int i){
             for (int i=0;i<n;i++)
                update_parameters(x2[i], y2[i]);
        break;}
-   default:return;
 
 
    }
-               controller_Status=EXECUTING;
+   if(i<4)
+   controller_Status=EXECUTING;
 
 }
 

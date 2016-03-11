@@ -57,11 +57,11 @@
     batteryStatus=navdataPtr->batteryPercent;
     est_altd=navdataPtr->altd/cm;
     movingState=navdataPtr->state;
-
+//SLAM [Roll Pitch Yaw]-->TRANSFORM--> [-Pitch Roll Yaw]
     float nav_raw_state[NAVDATA]={
             navdataPtr->vx/mm,navdataPtr->vy/mm,navdataPtr->vz/mm,
             navdataPtr->ax*g,navdataPtr->ay*g,g-navdataPtr->az*g,
-            navdataPtr->rotX*deg,navdataPtr->rotY*deg,navdataPtr->rotZ*deg,
+           -navdataPtr->rotY*deg,navdataPtr->rotX*deg,navdataPtr->rotZ*deg,
             navdataPtr->altd/cm
     };
 
@@ -72,17 +72,10 @@
 
  void stateEstimation::slamCb(const geometry_msgs::PoseConstPtr cam){
 
-    Matrix3d R;
-    Eigen::Vector3d t(cam->position.x,cam->position.y,cam->position.z);
-    R << 0, 1, 0,   0, 0, 1,   1, 0, 0;
-    // Transform the cordinate
-    t=VOSCALE*R*t;
-
-
-    //update the measurement
+   //FUSION [X Y Z Roll Pitch Yaw]-->TRANSFORM--> [X Z Y Roll Yaw -Pitch]
     float slam_raw_state[SLAMDATA]={
-        t(0),t(1),t(2),
-       cam->orientation.z,-cam->orientation.x,-cam->orientation.y
+       VOSCALE*cam->position.x,VOSCALE*cam->position.z,VOSCALE*cam->position.y,
+       cam->orientation.x,cam->orientation.z,-cam->orientation.y
     };
 
 
@@ -102,9 +95,9 @@
     tf::Quaternion q(orientation.x,orientation.y,orientation.z,orientation.w);
     tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
 
-
+//SLAM [Roll Pitch Yaw]-->TRANSFORM--> [-Pitch Roll Yaw]
     float imu_raw_state[IMUDATA]={
-        roll,pitch,yaw,
+        -pitch,roll,yaw,
         linear_acceleration.x,linear_acceleration.y,g-linear_acceleration.z,
         angular_velocity.x,angular_velocity.y,angular_velocity.z
 
@@ -235,8 +228,8 @@
      //POSITION &ORIENTATION :ORGANIZE VARIABLES
      for(int i(0);i<3;i++)
      {
-         euler_angle_mu[i]=NAV_mean[i+5];
-         euler_angle_sig[i]=NAV_var[i+5];
+         euler_angle_mu[i]=NAV_mean[i+6];
+         euler_angle_sig[i]=NAV_var[i+6];
          nav_position_mean[i]=position_mean[i];
          nav_position_mean[3+i]=euler_angle_mu[i];
          nav_position_var[i]=position_var[i];
@@ -351,12 +344,19 @@
 {
     ROS_INFO_STREAM("localization message received");
 
-    res.x=ukf_state[1];//robot x
-    res.y=ukf_state[2];//robot y
 
+    for(int i(0);i<3;i++){// populate x,y,z
+        res.state[i]=ukf_state[1+i];
+        if(i<2){//populate roll pitch
+           res.state[4+i]=ukf_state[10+i];
+        }
+    }
+    //populate yaw
+    res.state[3]=ukf_state[4];
     return true;
 
 }
+
 
 
 // INFORMATION
@@ -381,6 +381,8 @@
      double phi, theta, psi;//roll,pitch,yaw
      tf::Quaternion q(orientation.x,orientation.y,orientation.z,orientation.w);
      tf::Matrix3x3(q).getRPY(phi, theta, psi);
+
+
 
 
     mutex.lock();
@@ -493,16 +495,19 @@
  }
 
  void stateEstimation::nav_linear_vel(float *linear_velocity,float *data ){
+      //FUSION [vX vY vZ Roll Pitch Yaw]-->TRANSFORM--> [-vY -vX vZ Roll Pitch Yaw]
      double yawRad = data[9];
-     linear_velocity[0] = (sin(yawRad) * data[0] + cos(yawRad) * data[1]) ;
-     linear_velocity[1] = (cos(yawRad) * data[0] - sin(yawRad) * data[1]) ;
+     linear_velocity[1] =- (sin(yawRad) * data[0] + cos(yawRad) * data[1]) ;
+     linear_velocity[0] =- (cos(yawRad) * data[0] - sin(yawRad) * data[1]) ;
      linear_velocity[2] =data[2];
  }
 
- void stateEstimation::imu_linear_vel(float *linear_velocity,float *data_ori,float *data_acc, float dt ){
-     linear_velocity[0] =  (data_acc[0]*dt    +g*sin(data_ori[1]))/cm;
-     linear_velocity[1] =  (data_acc[1]*dt    +g*cos(data_ori[1])*sin(data_ori[0]))/cm ;
-     linear_velocity[2] =  (data_acc[2]*dt)/cm;
+ void stateEstimation::imu_linear_vel(float *linear_velocity,float *data_ori,float *data_acc){
+     float dt=STATE_UPDATE_TIME;
+     //FUSION [vX vY vZ Roll Pitch Yaw]-->TRANSFORM--> [vZ vY vX -Pitch roll Yaw]
+     linear_velocity[2] =  (-data_acc[1]*dt    +g*sin(data_ori[0]));
+     linear_velocity[1] =  (data_acc[0]*dt    +g*cos(data_ori[0])*sin(-data_ori[1])) ;
+     linear_velocity[0] =  (data_acc[2]*dt);
  }
 
  void stateEstimation::estimate_velocity(const float *mean, const float *track, float *velocity, int size){

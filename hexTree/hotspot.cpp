@@ -25,8 +25,8 @@ void hotspot::findHotspot(){
     hextree::obstacle robo;
     if (robot_client.call(robo))
     {
-        uav[0]=initialRobotPosition[0]=robo.response.x;
-        uav[1]=initialRobotPosition[1]=robo.response.y;
+        uav[0]=initialRobotPosition[0]=robo.response.state[0];
+        uav[1]=initialRobotPosition[1]=robo.response.state[1];
         ROS_WARN("Robot position is updated");
     }
     else{

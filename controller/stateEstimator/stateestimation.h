@@ -11,7 +11,7 @@
 #define deg 0.0174532925
 #define ALT_TH 2.5
 #define zero_eq 0.001
-#define STATE_UPDATE_TIME 0.5
+#define STATE_UPDATE_TIME 0.25
 
 
 
@@ -91,7 +91,7 @@ protected:
     nav_msgs::Odometry state_publish(const float *position_mean,const float *position_covar,
                                      const float *velocity_mean,const float *velocity_covar);
     void imu_linear_vel(float *linear_velocity,float *data_ori,
-                        float *data_acc, float dt=0.5 );
+                        float *data_acc);
 
     void logfile_Init();
 
@@ -102,6 +102,9 @@ protected:
 
     bool calibration(hextree::measurement::Request  &req,
                      hextree::measurement::Response &res);
+
+
+
 
     void debugger(std::string ss);
     void covariance(float *cov, const float *data);
