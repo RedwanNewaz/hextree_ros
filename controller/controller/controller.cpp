@@ -34,7 +34,8 @@ controller::controller()
     gain_write=new datalogger;
     cntrl_per=new datalogger;
     cntrl_per->fileName("contoller_performance_log");   
-    string b[11]={"xErr","yErr", "zErr","oErr","inX","inY","inZ","inO","MS","v_time","flag"};
+    string b[11]={"MS","xErr","yErr", "zErr","oErr","inX","inY","inZ","inO","v_time","flag"};
+
     cntrl_per->addHeader(b,11);
 
 //  controller intialize
@@ -249,12 +250,13 @@ void controller::debugger(std::string ss){
 }
 
 void controller::dataWrite(){
+   // string b[11]={"MS","xErr","yErr", "zErr","oErr","inX","inY","inZ","inO","v_time","flag"};
 
     float data[11];
     data[0]=getMS();
-    for(int i=1;i<SIGNAL_SIZE;i++){
-        data[i]=state_err[i-1];
-        data[4+i]=input_u[i-1];
+    for(int i=0;i<SIGNAL_SIZE;i++){
+        data[i+1]=state_err[i];
+        data[i+5]=input_u[i];
     }
 
     data[9]=vslam_count;
