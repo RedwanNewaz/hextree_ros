@@ -1,0 +1,2 @@
+HEXTREE_VS_6.01 without QCustomPlot
+HEXREE_VS_7.00 with graph

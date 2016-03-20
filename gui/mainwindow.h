@@ -5,8 +5,11 @@
 #define RAD 57.2958
 
 #include "header.h"
+#include "../controller/visualizer/robotviz.h"
+
 
 class ros_launch;
+class robotViz;
 
 namespace Ui {
 class MainWindow;
@@ -88,6 +91,10 @@ private:
     QProcess *process_ukf,*process_ardrone, *process_slam;
     bool subprograms;
     int lightIntensity;
+
+//    vizualization motion
+    robotViz *viz;
+
 
 
 

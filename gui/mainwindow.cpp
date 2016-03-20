@@ -36,6 +36,8 @@ MainWindow::MainWindow(QWidget *parent) :
     cameraInit();
     lightIntensity=0;
 
+
+
     //start timer
     timer->start(250);
 
@@ -78,8 +80,15 @@ void MainWindow::on_buttonStart_clicked()
 {
     raw_notification="Ros thread is started";
     MainWindow::EnableSubscriber();
-    sleep(1);
     drone_thread->start();
+
+    //viz init
+
+    viz =new robotViz(this);
+    viz->showNormal();
+
+
+
 
 }
 
@@ -351,6 +360,8 @@ void MainWindow::posi_display(){
        ui->robot_x_3->display(int(srv.response.state[3]*RAD));
        ui->robot_y_3->display(int(srv.response.state[4]*RAD));
        ui->robot_z_3->display(int(srv.response.state[5]*RAD));
+
+       viz->robot_pos(srv.response.state[0],srv.response.state[1]);
 
 }
 

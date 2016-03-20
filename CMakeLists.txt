@@ -81,11 +81,13 @@ set(CONTROLLER_HEADERS
   controller/stateEstimator/stateestimation.h
   controller/stateEstimator/scale.h
   
-  controller/visualizer/display.h
   controller/mav.h      
   controller/header.h
   controller/comm_function.h
   hexTree/datalogger.h
+
+  controller/visualizer/display.h
+
 
 
 )
@@ -97,10 +99,13 @@ set(CONTROLLER_SOURCES
   controller/stateEstimator/stateestimation.cpp
   controller/stateEstimator/scale.cpp
   
-  controller/visualizer/display.cpp
+
   controller/main.cpp
   controller/mav.cpp
   hexTree/datalogger.cpp
+
+  controller/visualizer/display.cpp
+
 
 )
 
@@ -144,6 +149,9 @@ set(GUI_SOURCE_FILES
   gui/mainwindow.cpp
   gui/ros_thread.cpp
   gui/ros_launch.cpp
+
+  controller/visualizer/qcustomplot.cpp
+  controller/visualizer/robotviz.cpp
 )
 
 set(GUI_HEADER_FILES
@@ -151,11 +159,15 @@ set(GUI_HEADER_FILES
   gui/ros_thread.h
   gui/ros_launch.h
   gui/header.h
+
+  controller/visualizer/qcustomplot.h
+  controller/visualizer/robotviz.h
 )
 
 # *.ui
 set(GUI_UI_FILES        
-  gui/mainwindow.ui 
+  gui/mainwindow.ui
+  controller/visualizer/robotviz.ui
 )
 
 # *.qrc

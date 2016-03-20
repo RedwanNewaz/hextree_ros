@@ -3,7 +3,7 @@
 #include "header.h"
 
 
-
+class robotViz;
 using namespace std;
 class ros_launch : public QThread
 {
@@ -47,6 +47,8 @@ private:
      unsigned int navdataCount;
      QMutex mutex;
      QImage _image;
+
+
 
 protected:
      void publish_image();
