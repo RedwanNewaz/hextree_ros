@@ -64,6 +64,7 @@ void MainWindow::on_buttonMoveit_clicked()
     process_cntrl =new QProcess(this);
     process_cntrl->start("rosrun",cntrl);
 
+
     if(ui->experiment->isChecked()){
          process_plan =new QProcess(this);
          process_plan->start("rosrun",planner);
@@ -178,6 +179,9 @@ void MainWindow::processInit()
 
     //enable image visualization
     connect(sensor_subs,SIGNAL(sig_image_pub(QImage)),this,SLOT(sub_write(QImage)));
+    //enable trajectory view
+
+    connect(sensor_subs,SIGNAL(sig_trajectory(doubleVect)),this,SLOT(traj_display(doubleVect)));
 
 }
 
@@ -239,7 +243,7 @@ void MainWindow::cameraInit(){
 void MainWindow::notificationDisplay(QString msg)
 {
     displayCount++;
-    if(displayCount%20==0)
+    if(displayCount%5==0)
         notification="";
 
     if(displayCount<2)
@@ -352,6 +356,7 @@ void MainWindow::posi_display(){
        hextree::obstacle srv;
        if(!robot_client.call(srv))
            return;
+       mutex.lock();
     //update position
        ui->robot_x->display(srv.response.state[0]);
        ui->robot_y->display(srv.response.state[1]);
@@ -362,7 +367,15 @@ void MainWindow::posi_display(){
        ui->robot_z_3->display(int(srv.response.state[5]*RAD));
 
        viz->robot_pos(srv.response.state[0],srv.response.state[1]);
+       mutex.unlock();
 
+}
+
+void MainWindow::traj_display(const doubleVect &traj){
+
+    ROS_ERROR("Trj size %d",traj[0].size());
+    for(int i(0);i<traj[0].size();i++)
+    viz->robot_traj(traj[0][i],traj[1][i]);
 }
 
 void MainWindow::sub_debug(QString msg){
@@ -406,7 +419,7 @@ void MainWindow::on_btn_calibration_clicked()
     int option =ui->scale_cal->currentIndex();
     switch(option){
         case 0:srv.request.state=50;break;
-        case 1:srv.request.state=5;break;
+        case 1:srv.request.state=15;break;
     }
 
     if (calibration_client.call(srv))

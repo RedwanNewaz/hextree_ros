@@ -6,6 +6,7 @@
  *    UAV is in stablizing mode
  * 5) After stablization average measurements are computed for
  *    the feedback of HexTree node
+ * 6) need to revise measurement reading
  */
 
 #include "seeker.h"
@@ -15,13 +16,21 @@ seeker::seeker()
     xbee	   = nh.subscribe("xbeeReading",50, &seeker::xbeeRead, this);
     traj_sub=nh.subscribe("traj",5,&seeker::trajCallback,this);
 
+
     obs_srv=nh.serviceClient<hextree::sensor>("seeker/measurements");
     attribute = nh.advertiseService("measurement",&seeker::measurements_attribute,this);
-    threshold = nh.advertiseService("threshold",&seeker::measurements_threshold,this);
 
-    active_sensing=active=false;
+
+    active_sensing=false;
     for (int i=0;i<3;i++)
         lightSensor[i]=0;
+
+    log =new datalogger;
+    log->fileName("hexTree_measurement");
+    string a[5]={"MS","x","y","mu","sigma"};
+    log->addHeader(a,5);
+
+
 }
 
 void seeker::xbeeRead(const geometry_msgs::QuaternionConstPtr msg){
@@ -32,17 +41,17 @@ void seeker::xbeeRead(const geometry_msgs::QuaternionConstPtr msg){
 }
 
 void seeker::SendMeasurementPacket(){
-
+ROS_WARN("Data sending");
     active_sensing=false;
     mesurements.clear();
     hextree::sensor lightIntensity;
 
     lightIntensity.request.count=terminate_exploration();
-    for( int i=0;i<traj_length;i++)
+    for( int i=0;i<traj_length-1;i++)
             lightIntensity.request.reading[i]=light_map[2][i];
-    if(obs_srv.call(lightIntensity))
-        ROS_WARN("Data send");
-
+    if(!obs_srv.call(lightIntensity))
+        ROS_ERROR("Data not send");
+ ROS_INFO_STREAM("Termination "<<lightIntensity.request.count);
     //wait a bit
 
     sleep(1);
@@ -52,21 +61,23 @@ void seeker::SendMeasurementPacket(){
 
 int seeker::terminate_exploration(){
     bool terminate=false;
-    for( int i=0;i<traj_length;i++)
+
+    for( int i=0;i<traj_length-1;i++)
     {
         float goal[2]={0,7},power=0;
-        for (unsigned int j(0);j<2;i++)
+        for (int j(0);j<2;j++)
             power+=pow(light_map[i][j]-goal[j],2);
         if(sqrt(power)<1)
            return terminate=true;
     }
+
     return terminate;
 }
 
 void seeker::trajCallback(const geometry_msgs::PoseArrayConstPtr msg){
 
      //light_map
-    if(!active)return;
+
      memory_allocate(msg->poses.size());
      foreach (geometry_msgs::Pose pose,msg->poses)
         update_positions(pose.position.x, pose.position.y);
@@ -96,10 +107,11 @@ void seeker::update_positions(float x, float y){
 
 void seeker::update_measurements(){
 
+     ROS_INFO_STREAM("update_measurements size "<<index_travese);
     if(mesurements.empty())return;
     float x=mean(mesurements),
           y=var(mean(mesurements),mesurements);
-    if(index_travese<traj_length){
+    if(index_travese<traj_length-1){
         light_map[index_travese][2]=x;
         light_map[index_travese][3]=y;
 
@@ -131,22 +143,13 @@ bool seeker::measurements_attribute(hextree::measurement::Request  &req,
     return true;
 }
 
-bool seeker::measurements_threshold(hextree::measurement::Request  &req,
-                                   hextree::measurement::Response &res)
-{
-    log =new datalogger;
-    log->fileName("hexTree_measurement");
-    string a[5]={"MS","x","y","mu","sigma"};
-    log->addHeader(a,5);
 
-    return active=true;
-}
 void seeker::gather(){
     float mes=0;
     for (int i=0;i<3;i++)
         mes+=lightSensor[i];
     mesurements.push_back(mes);
-    ROS_INFO_STREAM("mesurements size "<<mesurements.size());
+//    ROS_INFO_STREAM("mesurements size "<<mesurements.size());
 }
 
 void seeker::run(bool state){

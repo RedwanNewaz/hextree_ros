@@ -18,11 +18,13 @@ public:
     ~robotViz();
 
     void robot_pos(float x, float y);
+    void robot_traj(float x, float y);
 
 private:
     Ui::robotViz *ui;
     ros::NodeHandle nh_;
     ros::Subscriber robot_sub;
+    QVector<double>x,y;
 
 
 };

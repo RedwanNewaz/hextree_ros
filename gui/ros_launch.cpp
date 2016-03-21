@@ -20,6 +20,8 @@ void ros_launch::run()
     navdata_sub	   = nh_.subscribe(nh_.resolveName("ardrone/navdata"),50, &ros_launch::navdataCb, sensor_subs);
     debugger_sub=nh_.subscribe("jaistquad/debug", 1, &ros_launch::debugger_callback,sensor_subs);
     measurement_client=nh_.serviceClient<hextree::measurement>("measurement");
+    traj_sub=nh_.subscribe("traj",5,&ros_launch::trajCallback,sensor_subs);
+
 
 
     ros::MultiThreadedSpinner();
@@ -51,6 +53,23 @@ void ros_launch::debugger_callback(const std_msgs::StringConstPtr msg){
 
 }
 
+void ros_launch::trajCallback(const geometry_msgs::PoseArrayConstPtr msg){
+
+     //Traj_array2D=[x;y]
+     gui_traj.clear();
+     gui_traj.resize(2);
+     foreach (geometry_msgs::Pose pose,msg->poses){
+     gui_traj[0].push_back(pose.position.x);
+     gui_traj[1].push_back(pose.position.y);
+     }
+     ROS_INFO_STREAM("gui_traj size "<<gui_traj[0].size());
+     gui_traj_recv=true;
+
+
+
+}
+
+
 // update timer
 void ros_launch::gui_update_execution(const ros::TimerEvent& e)
 {
@@ -59,6 +78,12 @@ void ros_launch::gui_update_execution(const ros::TimerEvent& e)
     publish_msg();
     publish_image();
     publish_battery_level();
+
+    if(sensor_subs->gui_traj_recv){
+        ROS_WARN("TRAJ sending ..");
+    emit sig_trajectory(sensor_subs->gui_traj);
+    sensor_subs->gui_traj_recv=false;}
+
     sensor_subs->gui_comm=false;
 
 }

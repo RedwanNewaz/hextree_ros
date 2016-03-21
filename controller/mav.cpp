@@ -26,13 +26,13 @@ void mav::run(){
         Cntrl->readGain();
 
 
-        //SENSOR_FUSION DEPENDENCIES
-        navdata_sub	   = nh_.subscribe(nh_.resolveName("ardrone/navdata"),50, &mav::navdataCb, this);
-        imu_sub    = nh_.subscribe("/ardrone/imu",10, &mav::imudataCb, this);
-        ukf_sub	   = nh_.subscribe("sensor/fusion",10, &mav::ukf_localization, this);
+//        //SENSOR_FUSION DEPENDENCIES
+//        navdata_sub	   = nh_.subscribe(nh_.resolveName("ardrone/navdata"),50, &mav::navdataCb, this);
+//        imu_sub    = nh_.subscribe("/ardrone/imu",10, &mav::imudataCb, this);
+//        ukf_sub	   = nh_.subscribe("sensor/fusion",10, &mav::ukf_localization, this);
 
-        //ORB_SLAM DEPENDECIES
-        camPose_sub=nh_.subscribe("/slam/camera",10,&mav::camCallback, this);
+//        //ORB_SLAM DEPENDECIES
+//        camPose_sub=nh_.subscribe("/slam/camera",10,&mav::camCallback, this);
 
 
 }

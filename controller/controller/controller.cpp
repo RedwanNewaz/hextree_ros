@@ -42,6 +42,7 @@ controller::controller()
     count=resetController=0;
     timer = nh.createTimer(ros::Duration(CONTROL_TIME), &controller::run,this);
     inputApply=false;
+    readGain();
 
 
 }
@@ -52,8 +53,28 @@ void controller::run(const ros::TimerEvent& e){
 
     bool found_waypoint=traj_cntrl->find_waypoints(desired_location);
 
-    if(!state_update ||!found_waypoint||!compute_X_error())
+    /* TESTING CODE
+        if(found_waypoint)
+            resetController++;
+        if(resetController>30){
+            traj_cntrl->evolve_waypoints(1);
+            resetController=0;
+            hotspot_seeker->run(false);
+        }
+        if(resetController>15)
+        hotspot_seeker->run(true);
         return;
+    */
+
+
+    if(!found_waypoint||!compute_X_error()){
+
+        ControlCommand c;
+        c.roll =0;   //moving X direction
+        c.pitch=0; //moving Y direction
+        c.gaz  =0;    //moving Z direction
+        c.yaw  =0; //change Yaw
+        cmdPublish(c);}
     else
     {
 
@@ -62,6 +83,7 @@ void controller::run(const ros::TimerEvent& e){
         nocomm_vslam=true;
     else
         nocomm_vslam=false;
+
 
 
     if(resetController>30){
@@ -75,7 +97,7 @@ void controller::run(const ros::TimerEvent& e){
         debugger("goal converged "+num2str(min_ele_vec(converage)));
         converage.clear();
     }
-    Eigen::Vector4d u_cmd;
+    Eigen::Vector4f u_cmd;
     mutex.lock();
             u_cmd = Ar_drone_input();
 
@@ -121,11 +143,11 @@ mutex.unlock();
 
 }
 
- Eigen::Vector4d controller::Ar_drone_input(){
+ Eigen::Vector4f controller::Ar_drone_input(){
 
 
      //UPDATE CMD BASED ON PD GAIN
-     Eigen::Vector4d X_error_eig,X_dot_error_eig,cmd;
+     Eigen::Vector4f X_error_eig,X_dot_error_eig,cmd;
      for(int i=0;i<SIGNAL_SIZE;i++)
      {
          X_error_eig(i)=state_err[i];
@@ -149,7 +171,7 @@ mutex.unlock();
      if (abs(state_err[3])<max_yaw)
          cmd(3)=0;
      else if (abs(state_err[3])>0)
-          cmd(3)=state_err[3]/abs(state_err[3])*UNITSTEP;
+          cmd(3)=state_err[3]/abs(state_err[3])*UNITSTEP/2;
 
      ////ROS_INFO_STREAM("sig3 "<<cmd.transpose());
 
@@ -163,8 +185,10 @@ mutex.unlock();
 
      // RECORD STATE & CMD TO A TXT FILE
      memcpy(input_u, cmd.data(), SIGNAL_SIZE * sizeof *cmd.data());
+//         for(int i(0);i<SIGNAL_SIZE;i++)
+//             input_u[i]=cmd(i);
 
-  ////ROS_INFO_STREAM("sig5 "<<cmd.transpose());
+  ROS_INFO_STREAM("sig5 "<<cmd.transpose());
 
      dataWrite();
 
@@ -178,10 +202,12 @@ mutex.unlock();
       mutex.lock();
       float desired_state[STATE_SIZE];
       for(int i=0;i<STATE_SIZE;i++)
+      {
           if(i<SIGNAL_SIZE)
               desired_state[i]=desired_location[i]-state[i];
           else
               desired_state[i]=-state[i];
+      }
       memcpy(state_err, desired_state, STATE_SIZE * sizeof *desired_state);
       inputApply=false;
       mutex.unlock();
@@ -223,13 +249,29 @@ void controller::wrtieGain(){
 
 void controller::readGain(){
 
-    if (!gain_write->read_pid_gain(gain,"pidtune"))
-    {
-        gain[0]=100*KpX;gain[2]=100*KpY;gain[4]=100*KpZ;gain[6]=100*KpS;
-        gain[1]=100*KdX;gain[3]=100*KdY;gain[5]=100*KdZ;gain[7]=100*KdS;
-        wrtieGain();
-    }
-    updateGain();
+//    if (!gain_write->read_pid_gain(gain,"pidtune"))
+//    {
+//        gain[0]=100*KpX;gain[2]=100*KpY;gain[4]=100*KpZ;gain[6]=100*KpS;
+//        gain[1]=100*KdX;gain[3]=100*KdY;gain[5]=100*KdZ;gain[7]=100*KdS;
+//        wrtieGain();
+//    }
+    gain[0]=KpX;gain[1]=KpY;gain[2]=KpZ;gain[3]=KpS;
+    gain[4]=KdX;gain[5]=KdY;gain[6]=KdZ;gain[7]=KdS;
+
+    //updateGain();
+    for(int i(0);i<4;i++)
+        for(int j(0);j<4;j++)
+            if(i==j){
+                kp(i,j)=gain[i];
+                kd(i,j)=gain[4+i];
+            }
+            else{
+                kp(i,j)=0;
+                kd(i,j)=0;
+            }
+
+    ROS_INFO_STREAM("Kp\n"<<kp);
+    ROS_INFO_STREAM("Kd\n"<<kd);
 
 
 }
@@ -250,7 +292,7 @@ void controller::debugger(std::string ss){
 }
 
 void controller::dataWrite(){
-   // string b[11]={"MS","xErr","yErr", "zErr","oErr","inX","inY","inZ","inO","v_time","flag"};
+   // string b[11]={"MS","xErr","yErr", "zErr","oErr","inX","inY","inZ","inO","state_update","flag"};
 
     float data[11];
     data[0]=getMS();
@@ -259,7 +301,7 @@ void controller::dataWrite(){
         data[i+5]=input_u[i];
     }
 
-    data[9]=vslam_count;
+    data[9]=int(state_update);
     data[10]=int(nocomm_vslam);
 
     cntrl_per->dataWrite(data,11);

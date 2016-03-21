@@ -7,6 +7,9 @@
 #include "header.h"
 #include "../controller/visualizer/robotviz.h"
 
+typedef std::vector<std::vector<float> >doubleVect;
+Q_DECLARE_METATYPE(doubleVect);
+
 
 class ros_launch;
 class robotViz;
@@ -41,6 +44,7 @@ private slots:
     void updateBattery(double status);
     void updateIntensity(double status);
     void sub_debug(QString);
+    void traj_display(const doubleVect& traj);
 
 
 
@@ -58,12 +62,13 @@ private:
         bool change;
     }rollGain,pitchGain,altdGain,yawGain;
     QTimer *timer;
+    QMutex mutex;
 
     //process start variables
     bool on_fly_status,moveit_enable;
-    double battery;
-    long displayCount;
-    QImage *_image;
+
+    long displayCount,battery;
+
     QList<QString> pathFile,action;
     QString notification,raw_notification;
     ros_thread *drone_thread;
@@ -115,6 +120,7 @@ protected:
     void cameraInit();
     void EnableSubscriber();
     void posi_display();
+
 
 };
 

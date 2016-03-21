@@ -41,8 +41,9 @@ protected:
 
     bool measurements_attribute(hextree::measurement::Request  &req,
                                 hextree::measurement::Response &res);
-    bool measurements_threshold(hextree::measurement::Request  &req,
-                                hextree::measurement::Response &res);
+
+    bool talk(hextree::plannertalk::Request  &req,
+              hextree::plannertalk::Response &res);
 
 
 };

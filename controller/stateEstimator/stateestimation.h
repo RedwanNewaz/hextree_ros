@@ -28,11 +28,13 @@ enum SENSOR_DATA{
     IMUDATA=9,
     SLAMDATA=6,
  };
+class controller;
 
 class stateEstimation
 {
 public:
     stateEstimation();
+    void run();
 
     void navdataCb(const ardrone_autonomy::NavdataConstPtr navdataPtr);
     void slamCb(const geometry_msgs::PoseConstPtr cam);
@@ -43,7 +45,7 @@ public:
     void ukf_feedback(const nav_msgs::OdometryConstPtr Odom_msg);
     std::vector<double> stateDisplay();
 
-    vector<double> stateMSG();
+    void stateMSG();
 
 
 
@@ -65,12 +67,14 @@ private:
 
     ros::NodeHandle nh;
     ros::Publisher debugger_cntrl,slam_pub,nav_pub,imu_pub;
+    ros::Subscriber navdata_sub,imu_sub,ukf_sub,camPose_sub;
     ros::Timer state_update_timer;
     nav_msgs::Odometry  odom_slam,odom_imu,odom_nav;
 
     //path planner localization
     ros::ServiceServer robot_srv,calib_srv;
     datalogger *ukf_log,*slam_log,*imu_log,*nav_log;
+    controller *Cntrl;
 
 
 protected:

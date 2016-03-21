@@ -17,6 +17,7 @@
     nav_raw->initialize(NAVDATA);
     imu_raw->initialize(IMUDATA);
     slam_raw->initialize(SLAMDATA);
+    Cntrl=new controller;
 
     //VALUE INITIALIZATION
     VOSTART=zOFFSET=initialized_scale=false;
@@ -29,6 +30,7 @@
              angular_velocity[i]=angular_velocity_var[i]=zero_eq;
         }
     }
+
 
 
 
@@ -50,6 +52,20 @@
 
 }
 
+ void stateEstimation::run()
+ {
+
+     //SENSOR_FUSION DEPENDENCIES
+     navdata_sub	   = nh.subscribe(nh.resolveName("ardrone/navdata"),50, &stateEstimation::navdataCb, this);
+     imu_sub    = nh.subscribe("/ardrone/imu",10, &stateEstimation::imudataCb, this);
+     ukf_sub	   = nh.subscribe("sensor/fusion",10, &stateEstimation::ukf_feedback, this);
+
+     //ORB_SLAM DEPENDECIES
+     camPose_sub=nh.subscribe("/slam/camera",10,&stateEstimation::slamCb, this);
+     debugger("StateEstimation & Controller Activated");
+     sleep(1);
+
+ }
   //SENSOR CALLBACK
 
  void stateEstimation::navdataCb(const ardrone_autonomy::NavdataConstPtr navdataPtr){
@@ -122,18 +138,18 @@
      memcpy(track_vo_mu,position_mean,SLAMDATA*sizeof *position_mean);
      memcpy(track_vo_sig,position_var,SLAMDATA*sizeof *position_var);
      covariance(position_covar,position_var);
-    if(nan_array(position_covar,36) )
-    {
-        debugger("slam pos covs are nan");
-        return;
-    }
+//    if(nan_array(position_covar,36) )
+//    {
+//        debugger("slam pos covs are nan");
+//        return;
+//    }
      covariance(velocity_covar,velocity_var);
 
-   if(nan_array(velocity_covar,36))
-   {
-       debugger("slam vel covs are nan");
-       return;
-   }
+//   if(nan_array(velocity_covar,36))
+//   {
+//       debugger("slam vel covs are nan");
+//       return;
+//   }
      odom_slam=state_publish(position_mean,position_covar,velocity_mean,velocity_covar);
      slam_pub.publish(odom_slam);
      sensor_log(position_mean,velocity_mean,SLAMDATA);
@@ -166,11 +182,11 @@
 
      covariance(imu_position_covar,imu_position_var);
 
-     if(nan_array(imu_position_covar,36))
-     {
-         debugger("imu position are nan");
-         return;
-     }
+//     if(nan_array(imu_position_covar,36))
+//     {
+//         debugger("imu position are nan");
+//         return;
+//     }
 
      //COMPUTE LINEAR VELOCITIES
 
@@ -198,11 +214,11 @@
 
      covariance(imu_velocity_covar,imu_velocity_var);
 
-     if(nan_array(imu_velocity_covar,36))
-        {
-            debugger("imu covs are nan");
-            return;
-        }
+//     if(nan_array(imu_velocity_covar,36))
+//        {
+//            debugger("imu covs are nan");
+//            return;
+//        }
 
     odom_imu=state_publish(imu_position_mean,imu_position_covar,imu_velocity_mean,imu_velocity_covar);
     imu_pub.publish(odom_imu);
@@ -242,11 +258,11 @@
      nav_linear_vel(linear_velocity_var,NAV_var);
 
 
-     if(nan_array(nav_position_covar,36) )
-     {
-         debugger("nav covs are nan");
-         return;
-     }
+//     if(nan_array(nav_position_covar,36) )
+//     {
+//         debugger("nav covs are nan");
+//         return;
+//     }
 
 
      //ESTIMATE ANGULAR VELOCITIES
@@ -264,11 +280,11 @@
      }
      covariance(nav_velocity_covar,nav_velocity_var);
 
-     if(nan_array(nav_velocity_covar,36))
-     {
-         debugger("nav covs are nan");
-         return;
-     }
+//     if(nan_array(nav_velocity_covar,36))
+//     {
+//         debugger("nav covs are nan");
+//         return;
+//     }
 
      odom_nav=state_publish(nav_position_mean,nav_position_covar,nav_velocity_mean,nav_velocity_covar);
      nav_pub.publish(odom_nav);
@@ -302,23 +318,32 @@
 
      //update orientation first
      odom.pose.pose=euler2quaternion(position_mean[3],position_mean[4],position_mean[5]);
+    if(!nan_array(position_mean,3))
+    {
+         odom.pose.pose.position.x=position_mean[0];
+         odom.pose.pose.position.y=position_mean[1];
+         odom.pose.pose.position.z=position_mean[2];
+    }
+    if(!nan_array(velocity_mean,3))
+    {
+        odom.twist.twist.linear.x=velocity_mean[0];
+        odom.twist.twist.linear.y=velocity_mean[1];
+        odom.twist.twist.linear.z=velocity_mean[2];
+    }
+    if(!nan_array(velocity_mean,6))
+    {
+        odom.twist.twist.angular.x=velocity_mean[3];
+        odom.twist.twist.angular.y=velocity_mean[4];
+        odom.twist.twist.angular.z=velocity_mean[5];
+    }
 
-     odom.pose.pose.position.x=position_mean[0];
-     odom.pose.pose.position.y=position_mean[1];
-     odom.pose.pose.position.z=position_mean[2];
+     if(!nan_array(position_covar,36))
+        for(int i=0;i<36;i++)
+            odom.pose.covariance[i]=position_covar[i];
+     if(!nan_array(velocity_covar,36))
+        for(int i=0;i<36;i++)
+            odom.twist.covariance[i]=velocity_covar[i];
 
-
-     odom.twist.twist.linear.x=velocity_mean[0];
-     odom.twist.twist.linear.y=velocity_mean[1];
-     odom.twist.twist.linear.z=velocity_mean[2];
-
-     odom.twist.twist.angular.x=velocity_mean[3];
-     odom.twist.twist.angular.y=velocity_mean[4];
-     odom.twist.twist.angular.z=velocity_mean[5];
-     for(int i=0;i<36;i++){
-      odom.pose.covariance[i]=position_covar[i];
-      odom.twist.covariance[i]=velocity_covar[i];
-     }
     return odom;
  }
 
@@ -342,7 +367,7 @@
  bool stateEstimation::localization(hextree::obstacle::Request  &req,
          hextree::obstacle::Response &res)
 {
-    ROS_INFO_STREAM("localization message received");
+   // ROS_INFO_STREAM("localization message received");
 
 
     for(int i(0);i<3;i++){// populate x,y,z
@@ -391,20 +416,22 @@
                    theta,phi_dot,theta_dot};
     memcpy(ukf_state, arr, 13 * sizeof *arr);
     mutex.unlock();
+    stateMSG();
     ukf_log ->dataWrite(ukf_state,13);
 
 
 
  }
 
- vector<double>  stateEstimation::stateMSG(){
+void stateEstimation::stateMSG(){
 
      vector<double>msg;
      mutex.lock();
      for(int i=1;i<9;i++)
          msg.push_back(ukf_state[i]);
+     Cntrl->stateUpdate(msg);
      mutex.unlock();
-     return msg;
+
 
  }
 

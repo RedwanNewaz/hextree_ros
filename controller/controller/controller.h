@@ -32,7 +32,7 @@ public:
 
 
 private:
-    Eigen::Matrix4d kp,kd,dx_du;
+    Eigen::Matrix4f kp,kd,dx_du;
     float state[STATE_SIZE],desired_location[SIGNAL_SIZE],
     input_u[SIGNAL_SIZE],state_err[STATE_SIZE];
     bool nocomm_vslam,land_cmd,stablizing,state_update,inputApply;
@@ -82,7 +82,7 @@ protected:
 
 //    controller design
     void run(const ros::TimerEvent& e);
-    Eigen::Vector4d Ar_drone_input();
+    Eigen::Vector4f Ar_drone_input();
 };
 
 //PD default parameters

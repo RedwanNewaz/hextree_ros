@@ -12,6 +12,7 @@
 #include "hextree/measurement.h"
 #include "std_msgs/String.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "hextree/plannertalk.h"
 #include <sstream>
 #include "coverage.h"
 #include "datalogger.h"
@@ -28,6 +29,7 @@ public:
     void debugger(std::string ss);
     void findHotspot();
     void simulation();
+    void run();
     void updateMeasurement(float attribute[6]);
     void pathSeqToMes(float reading[6],int n);
 private:
@@ -42,11 +44,11 @@ private:
     ros::Publisher traj,debugger_cntrl;
     float HexSamples[7][2];
     ros::ServiceClient robot_client,measurement_client;
-    ros::ServiceServer service;
+    ros::ServiceServer service,mode;
     ros::Subscriber rviz_pose;
     int path_length, previous_direction;
     float backgroundMeasurement,meas_gain;
-    bool finishSearch;
+    bool finishSearch,publish_OPR;
     coverage *area_coverage;
     datalogger *datalog;
 
@@ -67,6 +69,8 @@ protected:
     MatrixXf array2Mat(float array[7][2]);
     bool sensor_reading(hextree::sensor::Request  &req,
                         hextree::sensor::Response &res);
+    bool talk(hextree::plannertalk::Request  &req,
+             hextree::plannertalk::Response &res);
 
 
 

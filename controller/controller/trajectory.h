@@ -26,6 +26,8 @@ private:
         IDLE=0
     }controller_Status;
 
+    std::string str;
+
 
 
 

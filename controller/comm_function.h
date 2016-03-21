@@ -9,6 +9,7 @@
 
 
 
+
 extern unsigned int ros_header_timestamp_base;
 inline static int getMS(ros::Time stamp = ros::Time::now())
 {

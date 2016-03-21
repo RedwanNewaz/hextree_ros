@@ -6,17 +6,51 @@ hotspot::hotspot()
     step=previous_direction=meas_gain=0;
     target[0]=uav[0]=uav[1]=0;
     target[1]=7;
-    enableSimulation=false;
+    enableSimulation=finishSearch=publish_OPR=false;
 
     tree=new infoTree;
     area_coverage=new coverage;
+
+}
+
+
+bool hotspot::talk(hextree::plannertalk::Request  &req,
+         hextree::plannertalk::Response &res)
+{
+   if(req.option>3){
+
+
+
+       switch(req.option){
+        case 4:
+           debugger("SEEKER_1.20 ACTIVATED");
+           findHotspot();
+           break;
+        case 5:
+           debugger("SEEKER_1.20 SIMULATION");
+           simulation();
+           break;
+       }
+       return true;
+   }
+     return (res.result=false);
+
+
+
+}
+
+
+void hotspot::run(){
     robot_client=nh_.serviceClient<hextree::obstacle>("localization");
     measurement_client=nh_.serviceClient<hextree::measurement>("measurement");
     debugger_cntrl=nh.advertise<std_msgs::String>("jaistquad/debug",1);
     traj= nh_.advertise<geometry_msgs::PoseArray>("traj", 10);
     service = nh_.advertiseService("seeker/measurements",&hotspot::sensor_reading,this);
-}
+    mode = nh_.advertiseService("motionplan",&hotspot::talk,this);
+    debugger("HEXTREE ENABLED");
+    sleep(1);
 
+}
 
 
 void hotspot::findHotspot(){
@@ -38,39 +72,20 @@ void hotspot::findHotspot(){
 
 
     //initialization
+    uav[0]=uav[1]=0;
     tree->addParent(uav);
-    hextree::measurement attribute;
-    attribute.request.state=1;
-    if(measurement_client.call(attribute))
-        backgroundMeasurement=attribute.response.result;
-    sleep(1);
-
-    std::stringstream ss;
-    ss<<"background measurement "<<backgroundMeasurement;
-    debugger(ss.str());
-
-
     tree->currentchildren(HexSamples);
-    sleep(1);
+
     sampling_path_publish();
 
-    ros::Rate r(10);
-    while (ros::ok() && !finishSearch ){
-        ros::spinOnce();
-         r.sleep();
 
-    }
 
-//    // find optimal path
-    if(tree->length()>1)
-        optimal_path_publish();
     //TODO write the whole tree
     sleep(1);
 
 }
 
-void hotspot::simulation()
-{
+void hotspot::simulation(){
 
     if(!enableSimulation)
     {
@@ -243,6 +258,14 @@ void hotspot::minMax(float* a,float* maxa,float* minb){
 
 void hotspot::sampling_path_publish(){
 
+    if(finishSearch){
+        ROS_WARN("search finish");
+            if(tree->length()>1 && !publish_OPR)
+                optimal_path_publish();
+            publish_OPR=true;
+            return;
+    }
+
     float X[6],Y[6];
     int pathLength=tree->optimize_sample_path(X, Y);
     geometry_msgs::PoseArray trajArray;
@@ -253,8 +276,10 @@ void hotspot::sampling_path_publish(){
       pose.position.x=X[i];
       pose.position.y=Y[i];
       trajArray.poses.push_back(pose);
+      ROS_INFO("hexTraj %d :=(%f , %f)",i,X[i],Y[i]);
     }
       traj.publish(trajArray);
+
 
 
  }
@@ -327,6 +352,7 @@ void hotspot::pathSeqToMes(float reading[6],int n){
          ROS_ERROR("measurement update error");
          continue;
         }
+        ROS_INFO(" sequence %d",sequence[j]);
 
         hex_mes[sequence[j] ]=reading[j];
     }
@@ -339,13 +365,25 @@ bool hotspot::sensor_reading(hextree::sensor::Request  &req,
          hextree::sensor::Response &res)
 {
     float mes[6];
+
+    path_length=6;
+
+
     for(int i=0;i<path_length;i++)
     {
         ROS_INFO_STREAM("measurements for path "<<req.reading[i]);
         mes[i]=req.reading[i];
     }
     finishSearch=req.count;
-    pathSeqToMes(mes,path_length);
+
+    if(publish_OPR)
+        ROS_ERROR("Mission Accomplished");
+    else
+        pathSeqToMes(mes,path_length);
+
+
+    //    // find optimal path
+
     res.result=true;
     return true;
 }

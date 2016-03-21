@@ -33,6 +33,7 @@ add_service_files(
   obstacle.srv
   sensor.srv
   measurement.srv
+
 )
 
 ## Generate added messages
@@ -81,7 +82,7 @@ set(CONTROLLER_HEADERS
   controller/stateEstimator/stateestimation.h
   controller/stateEstimator/scale.h
   
-  controller/mav.h      
+#  controller/mav.h
   controller/header.h
   controller/comm_function.h
   hexTree/datalogger.h
@@ -101,7 +102,7 @@ set(CONTROLLER_SOURCES
   
 
   controller/main.cpp
-  controller/mav.cpp
+#  controller/mav.cpp
   hexTree/datalogger.cpp
 
   controller/visualizer/display.cpp

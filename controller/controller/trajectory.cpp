@@ -42,21 +42,24 @@ void trajectory::update_setpoint(float *setpoints){
  }
 
 void trajectory::evolve_waypoints(int i){
-        index_travese+=i;
+    index_travese+=i;
     goal_converage=true;
+
 }
 
 void trajectory::modeSelction(int i){
-
+ROS_INFO_STREAM("mode selected "<<i);
    switch (i)
    {
        case 1:{//P2p
           memory_allocate(1);
+          str="P2p\n";
           update_parameters(0, 1);
        break;}
 
        case 2:{ //square box
            memory_allocate(4);
+           str="square box\n";
            float x1[4]={ 0,  -0.5, -0.5,   0};
            float y1[4]={0.5, 0.5,  0,    0};
            for (int i=0;i<4;i++)
@@ -67,6 +70,7 @@ void trajectory::modeSelction(int i){
             float x2[100],y2[100];
             int n=waypoints_log->read_traj(x2, y2);
             memory_allocate(n);
+            str="read txt log\n";
             for (int i=0;i<n;i++)
                update_parameters(x2[i], y2[i]);
        break;}
@@ -75,6 +79,11 @@ void trajectory::modeSelction(int i){
    }
    if(i<4)
    controller_Status=EXECUTING;
+
+   debugger(str);
+   sleep(1);
+
+
 
 }
 
@@ -104,6 +113,7 @@ bool trajectory::talk(hextree::plannertalk::Request  &req,
 
 void trajectory::memory_allocate(int HEIGHT){
 
+    str="";
     traj_length=HEIGHT;
     local_index=index_travese=0;
     Traj_array2D.clear();
@@ -112,14 +122,15 @@ void trajectory::memory_allocate(int HEIGHT){
      for (int i = 0; i < HEIGHT; ++i)
        Traj_array2D[i].resize(WIDTH);
 
-    debugger("new traj received "+num2str(HEIGHT));
-    sleep(1);
+   // debugger("new traj received "+num2str(HEIGHT));
+
 
 
 
 }
 
 void trajectory::update_parameters(float x, float y){
+
     if(local_index<traj_length){
         Traj_array2D[local_index][0]=x;
         Traj_array2D[local_index][1]=y;
@@ -127,6 +138,8 @@ void trajectory::update_parameters(float x, float y){
         Traj_array2D[local_index][3]=0;
         local_index++;
 
+str+="traj "+num2str(local_index)+" ("+num2str(x)+", "+num2str(y)+")\n";
 
     }
+
 }

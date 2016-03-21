@@ -74,6 +74,9 @@
 #include <QtGlobal>
 
 
+typedef std::vector<std::vector<float> >doubleVect;
+Q_DECLARE_METATYPE(doubleVect);
+
 
 
 

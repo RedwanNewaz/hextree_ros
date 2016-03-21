@@ -25,23 +25,40 @@ robotViz::robotViz(QWidget *parent) :
     ui->customPlot->setBackground(Qt::transparent);
     ui->customPlot->setAttribute(Qt::WA_OpaquePaintEvent, false);
 
-    ui->customPlot->addGraph(); // red line
+    ui->customPlot->addGraph(); // red line for traj
     ui->customPlot->graph(0)->setPen(QPen(Qt::red,2));
-    ui->customPlot->addGraph(); // blue dot
+    ui->customPlot->addGraph(); // blue dot robot position
     ui->customPlot->graph(1)->setPen(QPen(Qt::blue,2));
     ui->customPlot->graph(1)->setLineStyle(QCPGraph::lsNone);
     ui->customPlot->graph(1)->setScatterStyle(QCPScatterStyle::ssDisc);
+
+    ui->customPlot->addGraph(); // blue dot robot position
+    ui->customPlot->graph(2)->setPen(QPen(QColor(255, 100, 0),2));
+    ui->customPlot->graph(2)->setLineStyle(QCPGraph::lsNone);
+    ui->customPlot->graph(2)->setScatterStyle(QCPScatterStyle::ssDisc);
 
 
 }
 
 void robotViz::robot_pos(float x1, float y1)
 {
-if(abs(x1)>MAX_AREA||abs(y1)>MAX_AREA)return;
-    ui->customPlot->graph(0)->addData(x1, y1);
     ui->customPlot->graph(1)->clearData();
     ui->customPlot->graph(1)->addData(x1, y1);
     ui->customPlot->replot();
+if(abs(x1)>MAX_AREA||abs(y1)>MAX_AREA||abs(y1)<=0.001||abs(x1)<=0.001)return;
+
+    ui->customPlot->graph(0)->addData(x1, y1);
+
+    ui->customPlot->replot();
+
+}
+
+void robotViz::robot_traj(float x1, float y1)
+{
+
+    ui->customPlot->graph(2)->addData(x1, y1);
+    ui->customPlot->replot();
+
 
 }
 

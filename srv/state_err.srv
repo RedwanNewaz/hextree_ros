@@ -1,0 +1,4 @@
+float32[4] setpoint
+---
+float32[8] err
+
