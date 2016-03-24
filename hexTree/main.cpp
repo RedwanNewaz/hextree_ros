@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     hotspot HP;
     HP.run();
 
-    ros::MultiThreadedSpinner spinner(4);
+    ros::MultiThreadedSpinner spinner(2);
     spinner.spin();
 
     return 0;

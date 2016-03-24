@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define STOP 0.3
+#define STOP 0.2
 #define GARBAGE_MES 1000
 #define UNITSTEP 0.1
 #define STATE_SIZE 8
@@ -28,6 +28,7 @@ public:
     void stateUpdate(const vector<double>& msg);
     void debugger(std::string);
     void readGain();
+    void sensor_sub();
 
 
 
@@ -38,8 +39,8 @@ private:
     bool nocomm_vslam,land_cmd,stablizing,state_update,inputApply;
     ros::Timer timer;
     ros::NodeHandle nh;
-    ros::Publisher debugger_cntrl,land_pub,vel_pub;
-    ros::Subscriber xbee,camPose_sub;
+    ros::Publisher debugger_cntrl,land_pub,vel_pub,lyap_pub;
+    ros::Subscriber xbee,camPose_sub,lyap_sub,ukf_sub;
     ros::ServiceClient obs_srv;
     ros::ServiceServer service,attribute,threshold,mode;
 
@@ -77,6 +78,9 @@ protected:
              hextree::pidgain::Response &res);
 
     void camCallback(const geometry_msgs::PoseConstPtr cam);
+    void lyapCallback(const lyap_control::controller_msgConstPtr msg);
+    void ukf_feedback(const nav_msgs::OdometryConstPtr Odom_msg);
+
 
     bool compute_X_error();
 

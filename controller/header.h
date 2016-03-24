@@ -67,6 +67,10 @@
 #include "hextree/pidgain.h"
 //#include "hexTree/state_err.h"
 
+//lyapv control
+#include "lyap_control/controller_msg.h"
+#include "lyap_control/plant_msg.h"
+
 
 
 

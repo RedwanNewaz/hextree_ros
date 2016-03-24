@@ -17,7 +17,7 @@
     nav_raw->initialize(NAVDATA);
     imu_raw->initialize(IMUDATA);
     slam_raw->initialize(SLAMDATA);
-    Cntrl=new controller;
+    //Cntrl=new controller;
 
     //VALUE INITIALIZATION
     VOSTART=zOFFSET=initialized_scale=false;
@@ -62,8 +62,9 @@
 
      //ORB_SLAM DEPENDECIES
      camPose_sub=nh.subscribe("/slam/camera",10,&stateEstimation::slamCb, this);
-     debugger("StateEstimation & Controller Activated");
      sleep(1);
+     debugger("StateEstimation & Controller Activated");
+
 
  }
   //SENSOR CALLBACK
@@ -84,14 +85,24 @@
     if(VOSTART)
         nav_raw->update_parameters(nav_raw_state);
 
+
+
 }
 
  void stateEstimation::slamCb(const geometry_msgs::PoseConstPtr cam){
 
    //FUSION [X Y Z Roll Pitch Yaw]-->TRANSFORM--> [X Z Y Roll Yaw -Pitch]
+     float height=-VOSCALE*cam->position.y, offset=0;
+     //ADJUST THE ALTITUDE WITH ULTRASONIC + SLAM HEIGHT
+     if(est_altd>0){
+         static float ref_height_nav=est_altd;
+         static float ref_height_slam=height;
+         offset=ref_height_nav-ref_height_slam;
+     }
+
     float slam_raw_state[SLAMDATA]={
-       VOSCALE*cam->position.x,VOSCALE*cam->position.z,VOSCALE*cam->position.y,
-       cam->orientation.x,cam->orientation.z,-cam->orientation.y
+       VOSCALE*cam->position.x,VOSCALE*cam->position.z,height+offset,
+       cam->orientation.x,cam->orientation.z,zHeightoffset-cam->orientation.y
     };
 
 
@@ -372,12 +383,10 @@
 
     for(int i(0);i<3;i++){// populate x,y,z
         res.state[i]=ukf_state[1+i];
-        if(i<2){//populate roll pitch
-           res.state[4+i]=ukf_state[10+i];
-        }
+        res.state[3+i]=ukf_state[7+i];
+
     }
-    //populate yaw
-    res.state[3]=ukf_state[4];
+
     return true;
 
 }
@@ -408,32 +417,24 @@
      tf::Matrix3x3(q).getRPY(phi, theta, psi);
 
 
+//     string est_headername[] = {"MS","x","y","z","vx","vy","vz","rx","py","yz","rx_dot","py_dot","yz_dot"   };
 
 
     mutex.lock();
-    float arr[13]={getMS(), x,y,-z+zHeightoffset,psi,
-                   vx,vy,vz,psi_dot,phi,
-                   theta,phi_dot,theta_dot};
+    float arr[13]={getMS(), x,y,z,
+                   vx,vy,vz,
+                   phi,theta,psi,
+                   phi_dot,theta_dot,psi_dot};
     memcpy(ukf_state, arr, 13 * sizeof *arr);
     mutex.unlock();
-    stateMSG();
+
     ukf_log ->dataWrite(ukf_state,13);
 
 
 
  }
 
-void stateEstimation::stateMSG(){
 
-     vector<double>msg;
-     mutex.lock();
-     for(int i=1;i<9;i++)
-         msg.push_back(ukf_state[i]);
-     Cntrl->stateUpdate(msg);
-     mutex.unlock();
-
-
- }
 
 //NOTIFICATIONS & VIZUALIZATION
 
@@ -454,12 +455,12 @@ void stateEstimation::stateMSG(){
 
 
 
-     string headername[] = {"MS","x","y","z","psi","vx","vy","vz","psi_dot","phi","theta","phi_dot","theta_dot"   };
+    // string headername[] = {"MS","x","y","z","psi","vx","vy","vz","psi_dot","phi","theta","phi_dot","theta_dot"   };
      string est_headername[] = {"MS","x","y","z","vx","vy","vz","rx","py","yz","rx_dot","py_dot","yz_dot"   };
 
      sleep(1);
 
-     ukf_log    ->addHeader(headername,13);
+     ukf_log    ->addHeader(est_headername,13);
      slam_log   ->addHeader(est_headername,13);
      imu_log    ->addHeader(est_headername,13);
      nav_log    ->addHeader(est_headername,13);
@@ -485,15 +486,6 @@ void stateEstimation::stateMSG(){
     // ROS_INFO_STREAM(ss);
  }
 
- std::vector<double> stateEstimation:: stateDisplay(){
-    std::vector<double> robot;
-     for(int i=1;i<5;i++)
-       robot.push_back(ukf_state[i]);
-//roll_pitch update
-      for(int i=10;i<12;i++)
-         robot.push_back(ukf_state[i]);
-       return robot;
-  }
 
 // MATHS AND USFUL FUNCTION
  void stateEstimation::covariance(float *cov, const float *data){

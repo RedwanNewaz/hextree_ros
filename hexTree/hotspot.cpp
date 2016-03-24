@@ -47,8 +47,9 @@ void hotspot::run(){
     traj= nh_.advertise<geometry_msgs::PoseArray>("traj", 10);
     service = nh_.advertiseService("seeker/measurements",&hotspot::sensor_reading,this);
     mode = nh_.advertiseService("motionplan",&hotspot::talk,this);
-    debugger("HEXTREE ENABLED");
     sleep(1);
+    debugger("HEXTREE ENABLED");
+
 
 }
 

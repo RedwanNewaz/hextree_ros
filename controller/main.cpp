@@ -8,8 +8,10 @@ int main(int argc, char *argv[])
 
 
     stateEstimation uav;
+    controller cntrl;
     uav.run();
-    ros::MultiThreadedSpinner spinner(4);
+    cntrl.sensor_sub();
+    ros::MultiThreadedSpinner spinner(2);
     spinner.spin();
     return 0;
 }

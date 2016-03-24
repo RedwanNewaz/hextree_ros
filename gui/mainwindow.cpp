@@ -43,6 +43,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->tc->setChecked(true);
     ui->Cntrl->setChecked(true);
+    QFile("/home/redwan/Desktop/data/log.csv").remove();
 
 
 }
@@ -57,18 +58,18 @@ MainWindow::~MainWindow()
 void MainWindow::on_buttonMoveit_clicked()
 {
 
-    QStringList cntrl, planner;
+    QStringList cntrl, controller, planner;
     cntrl<<"hextree"<<"motion1";
+    controller<<"lyap_control"<<"controller";
     planner<<"hextree"<<"seeking1";
 
     process_cntrl =new QProcess(this);
     process_cntrl->start("rosrun",cntrl);
+    process_plan =new QProcess(this);
+    process_plan->start("rosrun",planner);
+    process_lyap=new QProcess(this);
+    process_lyap->start("rosrun",controller);
 
-
-    if(ui->experiment->isChecked()){
-         process_plan =new QProcess(this);
-         process_plan->start("rosrun",planner);
-     }
 
 
     subprograms=true;
@@ -87,6 +88,10 @@ void MainWindow::on_buttonStart_clicked()
 
     viz =new robotViz(this);
     viz->showNormal();
+
+    readWriteRes("read");
+
+
 
 
 
@@ -118,11 +123,9 @@ void MainWindow::on_buttonStop_clicked()
        if(subprograms){
            subprograms=false;
            process_cntrl->terminate();
-           if(ui->experiment->isChecked())
+           process_lyap->terminate();
            process_plan->terminate();
-           if(moveit_enable)
-           process_slam->terminate();
-       }
+          }
 
        notificationDisplay(raw_notification);
         moveit_enable=false;
@@ -216,20 +219,7 @@ void MainWindow::updateIntensity(double status)
 // UTILITIES
 
 void MainWindow::processStarup(){
-    if(!moveit_enable)
-       {
-           moveit_enable=true;
-           process_slam =new QProcess;
-           qDebug()<<pathFile;
-           process_slam->start("roslaunch",pathFile);
-           raw_notification="Processes are configured for operation...";
-       }
-       else
-            raw_notification="Did you shutdown the processes?";
 
-
-       MainWindow::notificationDisplay(raw_notification);
-       qDebug()<<"processes are "<<process_slam->state();
 }
 
 void MainWindow::cameraInit(){
@@ -243,7 +233,7 @@ void MainWindow::cameraInit(){
 void MainWindow::notificationDisplay(QString msg)
 {
     displayCount++;
-    if(displayCount%5==0)
+    if(displayCount%6==0)
         notification="";
 
     if(displayCount<2)
@@ -415,13 +405,36 @@ void MainWindow::on_btn_test_clicked()
 
 void MainWindow::on_btn_calibration_clicked()
 {
+    readWriteRes(ui->scale_cal->text());
     hextree::measurement srv;
-    int option =ui->scale_cal->currentIndex();
-    switch(option){
-        case 0:srv.request.state=50;break;
-        case 1:srv.request.state=15;break;
-    }
-
+    srv.request.state=ui->scale_cal->text().toDouble();
     if (calibration_client.call(srv))
         ROS_INFO_STREAM(" reponseded  ");
+
+}
+
+void MainWindow::readWriteRes(QString data){
+    QFile mFile("/home/redwan/Desktop/data/scale.txt");
+    if(data=="read"){
+         if(!mFile.open(QFile::ReadOnly | QFile::Text)){
+             qDebug() << "could not open file for read";
+             return;
+         }
+
+         QTextStream in(&mFile);
+         QString mText = in.readAll();
+         ui->scale_cal->setText(mText);
+    }
+    else{
+        if(!mFile.open(QFile::WriteOnly | QFile::Text)){
+            qDebug() << "could not open file for write";
+            return;
+        }
+
+        QTextStream out(&mFile);
+        out << data;
+
+    }
+
+         mFile.close();
 }

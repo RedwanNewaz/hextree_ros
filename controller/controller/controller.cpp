@@ -9,20 +9,25 @@
 
 #include "controller.h"
 
+#include "lyap_control/controller_msg.h"
+#include "lyap_control/plant_msg.h"
+
 controller::controller()
 {
 
     traj_cntrl=new trajectory;
     hotspot_seeker=new seeker;
     //PUBLISHER
+    lyap_pub	   = nh.advertise<lyap_control::plant_msg>("state",1);
+
     land_pub	   = nh.advertise<std_msgs::Empty>(nh.resolveName("ardrone/land"),1);
+
     vel_pub	   = nh.advertise<geometry_msgs::Twist>(nh.resolveName("cmd_vel"),1);
     debugger_cntrl=nh.advertise<std_msgs::String>("jaistquad/debug",1);
-    //SENSOR
-    camPose_sub=nh.subscribe("/slam/camera",10,&controller::camCallback, this);
     //SERVICE
     service = nh.advertiseService("pid_gains",&controller::gainchange,this);
     global_index= error=0;
+    stablizing =false;
 
 
     //datalogger
@@ -34,9 +39,9 @@ controller::controller()
     gain_write=new datalogger;
     cntrl_per=new datalogger;
     cntrl_per->fileName("contoller_performance_log");   
-    string b[11]={"MS","xErr","yErr", "zErr","oErr","inX","inY","inZ","inO","v_time","flag"};
+    string b[15]={"MS","Set_x","Set_y","Set_z","Set_Yaw","x","y","z","Yaw","inX","inY","inZ","inYaw","state_update","sig_flag"};
 
-    cntrl_per->addHeader(b,11);
+    cntrl_per->addHeader(b,15);
 
 //  controller intialize
     count=resetController=0;
@@ -78,12 +83,25 @@ void controller::run(const ros::TimerEvent& e){
     else
     {
 
+
     double dt=(getMS()-vslam_count)/1000;
     if(dt>1)
         nocomm_vslam=true;
     else
         nocomm_vslam=false;
 
+//lyap controller
+    lyap_control::plant_msg plant_state;
+    plant_state.t=getMS()/1000.00;
+    for (int i(0);i<SIGNAL_SIZE;i++){
+        if(stablizing||nocomm_vslam)
+            plant_state.setpoint[i]=plant_state.x[i]=state[i];
+        else{
+        plant_state.setpoint[i]=desired_location[i];
+        plant_state.x[i]=state[i];}
+    }
+
+    lyap_pub.publish(plant_state);
 
 
     if(resetController>30){
@@ -125,11 +143,20 @@ mutex.lock();
      if(tmsg.size()<STATE_SIZE)
         debugger("controller Error in state update");
      std::copy(tmsg.begin(), tmsg.end(), state);
+
      state_update=true;
 mutex.unlock();
 
  }
 
+void controller::sensor_sub(){
+    //SENSOR
+    camPose_sub=nh.subscribe("/slam/camera",10,&controller::camCallback, this);
+    lyap_sub=nh.subscribe("control_effort",10,&controller::lyapCallback, this);
+    ukf_sub	   = nh.subscribe("sensor/fusion",10, &controller::ukf_feedback, this);
+
+
+}
 
 //----------------------------------CMD PUBLISH----------------------------------------------
  void controller::cmdPublish(ControlCommand cmd){
@@ -148,6 +175,8 @@ mutex.unlock();
 
      //UPDATE CMD BASED ON PD GAIN
      Eigen::Vector4f X_error_eig,X_dot_error_eig,cmd;
+
+     /* PD CONTROLLER IMPLEMENTATION
      for(int i=0;i<SIGNAL_SIZE;i++)
      {
          X_error_eig(i)=state_err[i];
@@ -178,15 +207,28 @@ mutex.unlock();
          // MAKE ALT CONTROLLER SLAGGISH
      cmd(2)*=UNITSTEP;
 
+     */
+
+
+     for(int i(0);i<SIGNAL_SIZE;i++)
+         cmd(i)= input_u[i];
+
+     double max_yaw=10*deg;
+     if (abs(state_err[3])<max_yaw)
+         cmd(3)=0;
+
+    ROS_INFO("lyap (%f %f %f %f)",input_u[0],input_u[1],input_u[2],input_u[3]);
+
  //    GOAL CONVERGE
-         if( goalConverage()||obstacleStatus||nocomm_vslam)
+         if( goalConverage()||nocomm_vslam)
              for(int i=0;i<SIGNAL_SIZE;i++)
                  cmd(i)=0;
 
      // RECORD STATE & CMD TO A TXT FILE
-     memcpy(input_u, cmd.data(), SIGNAL_SIZE * sizeof *cmd.data());
-//         for(int i(0);i<SIGNAL_SIZE;i++)
-//             input_u[i]=cmd(i);
+         for(int i(0);i<SIGNAL_SIZE;i++)
+             input_u[i]=cmd(i);
+     //memcpy(input_u, cmd.data(), SIGNAL_SIZE * sizeof *cmd.data());
+//
 
   ROS_INFO_STREAM("sig5 "<<cmd.transpose());
 
@@ -200,6 +242,8 @@ mutex.unlock();
       if(!state_update)return false;
 
       mutex.lock();
+      static float init_yaw=state[3];
+      desired_location[3]=init_yaw;
       float desired_state[STATE_SIZE];
       for(int i=0;i<STATE_SIZE;i++)
       {
@@ -292,19 +336,20 @@ void controller::debugger(std::string ss){
 }
 
 void controller::dataWrite(){
-   // string b[11]={"MS","xErr","yErr", "zErr","oErr","inX","inY","inZ","inO","state_update","flag"};
+  //  string b[15]={"MS","Set_x","Set_y","Set_z","Set_Yaw","x","y","z","Yaw","inX","inY","inZ","inYaw","state_update","sig_flag"};
 
-    float data[11];
+    float data[15];
     data[0]=getMS();
     for(int i=0;i<SIGNAL_SIZE;i++){
-        data[i+1]=state_err[i];
-        data[i+5]=input_u[i];
+        data[i+1]=desired_location[i];
+        data[i+5]=state[i];
+        data[i+9]=input_u[i];
     }
 
-    data[9]=int(state_update);
-    data[10]=int(nocomm_vslam);
+    data[9+4]=int(state_update);
+    data[10+4]=int(nocomm_vslam);
 
-    cntrl_per->dataWrite(data,11);
+    cntrl_per->dataWrite(data,15);
 
 
 }
@@ -332,5 +377,28 @@ void controller::camCallback(const geometry_msgs::PoseConstPtr cam){
     vslam_count=getMS();
 }
 
+void controller::lyapCallback(const lyap_control::controller_msgConstPtr msg){
+    float factor[]={100,100,1000,1000};
+    for(int i(0);i<SIGNAL_SIZE;i++)
+        input_u[i]=msg->u[i]/factor[i];
 
+}
 
+void controller::ukf_feedback(const nav_msgs::OdometryConstPtr Odom_msg){
+
+            state[0]=Odom_msg->pose.pose.position.x;
+            state[1]=Odom_msg->pose.pose.position.y;
+            state[2]=Odom_msg->pose.pose.position.z;
+
+            geometry_msgs::Quaternion orientation=Odom_msg->pose.pose.orientation;
+            double phi, theta, psi;//roll,pitch,yaw
+            tf::Quaternion q(orientation.x,orientation.y,orientation.z,orientation.w);
+            tf::Matrix3x3(q).getRPY(phi, theta, psi);
+            state[3]=psi;
+            state[4]=Odom_msg->twist.twist.linear.x;
+            state[5]=Odom_msg->twist.twist.linear.y;
+            state[6]=Odom_msg->twist.twist.linear.z;
+            state[7]=Odom_msg->twist.twist.angular.z;
+            state_update=true;
+
+}

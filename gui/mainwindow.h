@@ -92,8 +92,8 @@ private:
      //------------------------------
 
         //subordinate program
-    QProcess *process_cntrl,*process_plan, *process_extra;
-    QProcess *process_ukf,*process_ardrone, *process_slam;
+    QProcess *process_cntrl,*process_plan, *process_lyap;
+
     bool subprograms;
     int lightIntensity;
 
@@ -120,6 +120,7 @@ protected:
     void cameraInit();
     void EnableSubscriber();
     void posi_display();
+    void readWriteRes(QString read);
 
 
 };

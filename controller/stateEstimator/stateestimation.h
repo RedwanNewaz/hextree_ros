@@ -43,9 +43,8 @@ public:
 
     double battery();
     void ukf_feedback(const nav_msgs::OdometryConstPtr Odom_msg);
-    std::vector<double> stateDisplay();
 
-    void stateMSG();
+
 
 
 

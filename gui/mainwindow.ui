@@ -149,6 +149,12 @@
       </item>
       <item>
        <widget class="QGroupBox" name="action">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="title">
          <string>     Action</string>
         </property>
@@ -185,6 +191,26 @@
        </widget>
       </item>
       <item>
+       <widget class="QLineEdit" name="scale_cal">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_calibration">
+        <property name="text">
+         <string>calibration</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="verticalSpacer_2">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -196,27 +222,6 @@
          </size>
         </property>
        </spacer>
-      </item>
-      <item>
-       <widget class="QComboBox" name="scale_cal">
-        <item>
-         <property name="text">
-          <string>LargeArea</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>SmallArea</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="btn_calibration">
-        <property name="text">
-         <string>calibration</string>
-        </property>
-       </widget>
       </item>
       <item>
        <widget class="QLabel" name="label_9">
@@ -257,6 +262,13 @@
           <string>6</string>
          </property>
         </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_test">
+        <property name="text">
+         <string>setThreshold</string>
+        </property>
        </widget>
       </item>
       <item>
@@ -470,19 +482,6 @@
          <string>Seeker Enable</string>
         </property>
        </widget>
-      </widget>
-      <widget class="QPushButton" name="btn_test">
-       <property name="geometry">
-        <rect>
-         <x>30</x>
-         <y>290</y>
-         <width>99</width>
-         <height>27</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>setThreshold</string>
-       </property>
       </widget>
       <widget class="QPushButton" name="button_motion">
        <property name="geometry">

@@ -172,7 +172,8 @@ set(GUI_UI_FILES
 )
 
 # *.qrc
-set(GUI_RESOURCE_FILES        
+set(GUI_RESOURCE_FILES
+    gui/parameter.qrc
 )
 
 
