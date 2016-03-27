@@ -2,3 +2,4 @@ HEXTREE_VS_6.01 without QCustomPlot
 HEXREE_VS_7.00 with graph
 HEXREE_VS_7.50 with hextree + last PID fix
 HEXREE_VS_8.00 with lyapov controller
+HEXREE_VS_8.50 with lyapov controller+ seeker update
