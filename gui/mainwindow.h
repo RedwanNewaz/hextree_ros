@@ -75,7 +75,7 @@ private:
     ros_launch *sensor_subs;
     QStringList topicList,executionList;
     QProcess *process,*process_action;
-    ros::ServiceClient robot_client,client,test_obs_clinet,calibration_client;
+    ros::ServiceClient robot_client,test_obs_clinet,calibration_client;
     ros::ServiceClient plannerclient;
     ros::NodeHandle n;
 

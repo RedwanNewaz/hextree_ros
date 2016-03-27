@@ -16,6 +16,11 @@ infoTree::infoTree()
     datalog->addHeader(headername,6);
 
 }
+infoTree::~infoTree(){
+    delete root;
+    delete visualize;
+    delete datalog;
+}
 
 void infoTree::addParent(float *loc)
 {

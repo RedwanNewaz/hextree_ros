@@ -26,6 +26,7 @@ public:
     void sendFlattrim();
     void posePub(QPointF);
     void goalPub(QPointF);
+    void hextree_motion(int i);
 
 
 
@@ -59,6 +60,7 @@ private:
     ros::Publisher takeoff_pub;
     ros::Publisher land_pub;
     ros::Publisher toggleState_pub;
+    ros::Publisher hextree_pub;
     ros::ServiceClient toggleCam_srv;
     std_srvs::Empty toggleCam_srv_srvs;
     ros::ServiceClient flattrim_srv;

@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     controller cntrl;
     uav.run();
     cntrl.sensor_sub();
-    ros::MultiThreadedSpinner spinner(2);
+    ros::MultiThreadedSpinner spinner(6);
     spinner.spin();
     return 0;
 }

@@ -44,6 +44,7 @@ class infoTree
 {
 public:
     infoTree();
+    ~infoTree();
     struct node{
         int key;
         float location[2],cost,info;

@@ -10,6 +10,7 @@ class coverage
 {
 public:
     coverage();
+    ~coverage();
        int area_coverage_direction(float robot[2], int dir=-1);
 private:
     enum direction{

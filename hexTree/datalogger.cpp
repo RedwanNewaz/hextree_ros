@@ -68,7 +68,7 @@ void datalogger::dataWrite(float *a, float size)
     if(file.isOpen()){
         QTextStream outStream(&file);
         for(int i=0;i<size;i++)
-            outStream<<a[i]<<"\t";
+            outStream<<a[i]<<",";
         outStream<<"\n";
 
     }
@@ -84,7 +84,7 @@ void datalogger::addHeader(string *v,int sizearr){
     if(file.isOpen()){
         QTextStream outStream(&file);
         for(int i=0;i<sizearr;i++)
-            outStream<<QString::fromUtf8( v[i].c_str())<<"\t";
+            outStream<<QString::fromUtf8( v[i].c_str())<<",";
         outStream<<"\n";
 
     }
@@ -128,7 +128,7 @@ void datalogger::read_traj_file_protect(QString log){
         file.close();
     while(!file.atEnd()){
         QString data=file.readLine();
-        QStringList list=data.split("\t",QString::SkipEmptyParts);
+        QStringList list=data.split(",",QString::SkipEmptyParts);
 
         if(list.size()>1){
         traj_x.push_back(list[0].toDouble());

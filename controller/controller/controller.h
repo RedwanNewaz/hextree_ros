@@ -7,6 +7,7 @@
 #define STATE_SIZE 8
 #define SIGNAL_SIZE 4
 #define CONTROL_TIME 0.03
+#define RESET_FQ 45
 
 
 #include "../header.h"
@@ -25,9 +26,9 @@ class controller
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     controller();
+    ~controller();
     void stateUpdate(const vector<double>& msg);
     void debugger(std::string);
-    void readGain();
     void sensor_sub();
 
 
@@ -42,7 +43,7 @@ private:
     ros::Publisher debugger_cntrl,land_pub,vel_pub,lyap_pub;
     ros::Subscriber xbee,camPose_sub,lyap_sub,ukf_sub;
     ros::ServiceClient obs_srv;
-    ros::ServiceServer service,attribute,threshold,mode;
+    ros::ServiceServer attribute,threshold,mode;
 
     int count,resetController,obstacleStatus;
     double error,vslam_count,gain[STATE_SIZE];
@@ -57,7 +58,7 @@ private:
 
 
 //datalogger
-            datalogger *log,*cntrl_per,*gain_write;
+            datalogger *log,*cntrl_per;
             int global_index;
             vector<float> converage;
 
@@ -68,14 +69,10 @@ protected:
 
 
     void dataWrite();
-    void updateGain();
-    void wrtieGain();
 
 
 
     //service
-    bool gainchange(hextree::pidgain::Request  &req,
-             hextree::pidgain::Response &res);
 
     void camCallback(const geometry_msgs::PoseConstPtr cam);
     void lyapCallback(const lyap_control::controller_msgConstPtr msg);

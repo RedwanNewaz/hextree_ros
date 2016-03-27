@@ -16,6 +16,7 @@
 #include <sstream>
 #include "coverage.h"
 #include "datalogger.h"
+#include "std_msgs/Int8.h"
 
 
 using namespace Eigen;
@@ -26,6 +27,7 @@ class hotspot
 {
 public:
     hotspot();
+    ~hotspot();
     void debugger(std::string ss);
     void findHotspot();
     void simulation();
@@ -45,7 +47,7 @@ private:
     float HexSamples[7][2];
     ros::ServiceClient robot_client,measurement_client;
     ros::ServiceServer service,mode;
-    ros::Subscriber rviz_pose;
+    ros::Subscriber rviz_pose,gui_choice;
     int path_length, previous_direction;
     float backgroundMeasurement,meas_gain;
     bool finishSearch,publish_OPR;
@@ -71,6 +73,8 @@ protected:
                         hextree::sensor::Response &res);
     bool talk(hextree::plannertalk::Request  &req,
              hextree::plannertalk::Response &res);
+
+    void callback_choice(const std_msgs::Int8ConstPtr msg);
 
 
 

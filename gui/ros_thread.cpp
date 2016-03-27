@@ -3,6 +3,7 @@
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Twist.h"
+#include "std_msgs/Int8.h"
 ros_thread::ros_thread(QObject *parent) :
     QThread(parent)
 {
@@ -26,6 +27,9 @@ void ros_thread::run()
 
     goal_pub	   = nh_.advertise<geometry_msgs::Twist >(nh_.resolveName("cmd_vel"),1);
     pose_pub	   = nh_.advertise<geometry_msgs::PoseStamped>("/uav/pose",1);
+    hextree_pub    =nh_.advertise<std_msgs::Int8>("choice",1);
+
+
     qDebug()<<"signal received";
     ros::spin();
 
@@ -97,5 +101,15 @@ void ros_thread::sendFlattrim()
     ROS_INFO("sendFlattrim");
     mutex.lock();
     flattrim_srv.call(flattrim_srv_srvs);
+    mutex.unlock();
+}
+
+void ros_thread::hextree_motion(int i)
+{
+    ROS_INFO("hextree_motion changing");
+    mutex.lock();
+    std_msgs::Int8 msg;
+    msg.data=i;
+    hextree_pub.publish(msg);
     mutex.unlock();
 }

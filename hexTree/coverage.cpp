@@ -12,6 +12,9 @@ coverage::coverage()
 
 
 }
+coverage::~coverage(){
+    delete local_map;
+}
 
 int coverage::area_coverage_direction(float robot[2], int dir){
 

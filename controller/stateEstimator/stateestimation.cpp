@@ -21,7 +21,7 @@
 
     //VALUE INITIALIZATION
     VOSTART=zOFFSET=initialized_scale=false;
-    batteryStatus=VOSCALE=zHeightoffset=publish_data=zero_eq;
+    batteryStatus=VOSCALE =publish_data=zero_eq;
     for(int i(0);i<SLAMDATA;i++){
         track_vo_mu[i]=track_vo_sig[i]=zero_eq;
         velocity_mean[i]=velocity_var[i]=zero_eq;
@@ -51,6 +51,18 @@
      logfile_Init();
 
 }
+
+ stateEstimation::~stateEstimation(){
+
+     delete nav_raw;
+     delete slam_raw;
+     delete imu_raw;
+     delete ukf_log;
+     delete slam_log;
+     delete imu_log;
+     delete nav_log;
+
+ }
 
  void stateEstimation::run()
  {
@@ -102,7 +114,7 @@
 
     float slam_raw_state[SLAMDATA]={
        VOSCALE*cam->position.x,VOSCALE*cam->position.z,height+offset,
-       cam->orientation.x,cam->orientation.z,zHeightoffset-cam->orientation.y
+       cam->orientation.x,cam->orientation.z,-cam->orientation.y
     };
 
 
@@ -149,18 +161,10 @@
      memcpy(track_vo_mu,position_mean,SLAMDATA*sizeof *position_mean);
      memcpy(track_vo_sig,position_var,SLAMDATA*sizeof *position_var);
      covariance(position_covar,position_var);
-//    if(nan_array(position_covar,36) )
-//    {
-//        debugger("slam pos covs are nan");
-//        return;
-//    }
+
      covariance(velocity_covar,velocity_var);
 
-//   if(nan_array(velocity_covar,36))
-//   {
-//       debugger("slam vel covs are nan");
-//       return;
-//   }
+
      odom_slam=state_publish(position_mean,position_covar,velocity_mean,velocity_covar);
      slam_pub.publish(odom_slam);
      sensor_log(position_mean,velocity_mean,SLAMDATA);
@@ -269,13 +273,6 @@
      nav_linear_vel(linear_velocity_var,NAV_var);
 
 
-//     if(nan_array(nav_position_covar,36) )
-//     {
-//         debugger("nav covs are nan");
-//         return;
-//     }
-
-
      //ESTIMATE ANGULAR VELOCITIES
      estimate_velocity(nav_position_mean,track_nav_ori_mu,angular_velocity,3);
      estimate_velocity(nav_position_var,track_nav_ori_var,angular_velocity_var,3);
@@ -290,12 +287,6 @@
          nav_velocity_var[3+i]=angular_velocity_var[i];
      }
      covariance(nav_velocity_covar,nav_velocity_var);
-
-//     if(nan_array(nav_velocity_covar,36))
-//     {
-//         debugger("nav covs are nan");
-//         return;
-//     }
 
      odom_nav=state_publish(nav_position_mean,nav_position_covar,nav_velocity_mean,nav_velocity_covar);
      nav_pub.publish(odom_nav);

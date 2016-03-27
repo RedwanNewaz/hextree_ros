@@ -107,8 +107,9 @@ bool trajectory::talk(hextree::plannertalk::Request  &req,
          hextree::plannertalk::Response &res)
 {
    modeSelction(req.option);
-   res.result=true;
-   return true;
+
+   return (req.option<4)?(res.result=true):(res.result=false);
+
 }
 
 void trajectory::memory_allocate(int HEIGHT){

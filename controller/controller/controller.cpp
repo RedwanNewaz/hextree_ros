@@ -7,6 +7,7 @@
  * 6) PID GAIN can be recorded to txt file
  */
 
+
 #include "controller.h"
 
 #include "lyap_control/controller_msg.h"
@@ -19,13 +20,10 @@ controller::controller()
     hotspot_seeker=new seeker;
     //PUBLISHER
     lyap_pub	   = nh.advertise<lyap_control::plant_msg>("state",1);
-
     land_pub	   = nh.advertise<std_msgs::Empty>(nh.resolveName("ardrone/land"),1);
-
     vel_pub	   = nh.advertise<geometry_msgs::Twist>(nh.resolveName("cmd_vel"),1);
     debugger_cntrl=nh.advertise<std_msgs::String>("jaistquad/debug",1);
     //SERVICE
-    service = nh.advertiseService("pid_gains",&controller::gainchange,this);
     global_index= error=0;
     stablizing =false;
 
@@ -36,7 +34,6 @@ controller::controller()
     string a[2]={"waypoint_index", "uncertainty"};
     log->addHeader(a,2);
 
-    gain_write=new datalogger;
     cntrl_per=new datalogger;
     cntrl_per->fileName("contoller_performance_log");   
     string b[15]={"MS","Set_x","Set_y","Set_z","Set_Yaw","x","y","z","Yaw","inX","inY","inZ","inYaw","state_update","sig_flag"};
@@ -47,8 +44,17 @@ controller::controller()
     count=resetController=0;
     timer = nh.createTimer(ros::Duration(CONTROL_TIME), &controller::run,this);
     inputApply=false;
-    readGain();
 
+
+
+}
+
+controller::~controller(){
+
+delete log;
+delete cntrl_per;
+delete traj_cntrl;
+delete hotspot_seeker;
 
 }
 
@@ -57,21 +63,6 @@ controller::controller()
 void controller::run(const ros::TimerEvent& e){
 
     bool found_waypoint=traj_cntrl->find_waypoints(desired_location);
-
-    /* TESTING CODE
-        if(found_waypoint)
-            resetController++;
-        if(resetController>30){
-            traj_cntrl->evolve_waypoints(1);
-            resetController=0;
-            hotspot_seeker->run(false);
-        }
-        if(resetController>15)
-        hotspot_seeker->run(true);
-        return;
-    */
-
-
     if(!found_waypoint||!compute_X_error()){
 
         ControlCommand c;
@@ -82,8 +73,21 @@ void controller::run(const ros::TimerEvent& e){
         cmdPublish(c);}
     else
     {
+//----------------Testing
+/*
+        if(resetController>30)
+            stablizing=true;
 
+            hotspot_seeker->run(stablizing);
+        if(resetController>RESET_FQ){
+            traj_cntrl->evolve_waypoints(1);
+            stablizing=false;
+            resetController=0;
 
+        }
+        return;
+        */
+//-------------------------
     double dt=(getMS()-vslam_count)/1000;
     if(dt>1)
         nocomm_vslam=true;
@@ -104,7 +108,7 @@ void controller::run(const ros::TimerEvent& e){
     lyap_pub.publish(plant_state);
 
 
-    if(resetController>30){
+    if(resetController>RESET_FQ){
         global_index++;
         float a[2]={global_index,min_ele_vec(converage)};
         traj_cntrl->evolve_waypoints(1);
@@ -143,7 +147,6 @@ mutex.lock();
      if(tmsg.size()<STATE_SIZE)
         debugger("controller Error in state update");
      std::copy(tmsg.begin(), tmsg.end(), state);
-
      state_update=true;
 mutex.unlock();
 
@@ -171,49 +174,12 @@ void controller::sensor_sub(){
 }
 
  Eigen::Vector4f controller::Ar_drone_input(){
-
-
-     //UPDATE CMD BASED ON PD GAIN
-     Eigen::Vector4f X_error_eig,X_dot_error_eig,cmd;
-
-     /* PD CONTROLLER IMPLEMENTATION
-     for(int i=0;i<SIGNAL_SIZE;i++)
-     {
-         X_error_eig(i)=state_err[i];
-         X_dot_error_eig(i)=state_err[4+i];
-     }
-     cmd=kp*(X_error_eig)+kd*X_dot_error_eig;
-     ////ROS_INFO_STREAM("sig1 "<<cmd.transpose());
-
-     // ROUNDING INPUTS
-     float max=cmd.maxCoeff();
-     for(int i=0;i<SIGNAL_SIZE;i++)
-         if(abs(cmd(i))<0.33*abs(max))// TOO SMALL!
-             cmd(i)=0;
-         else if (abs(cmd(i))>0)
-             cmd(i)=cmd(i)/abs(max)*UNITSTEP;
-         ////ROS_INFO_STREAM("sig2 "<<cmd.transpose());
-
-     // MAKE YAW CONTROLLER SLAGGISH
-     double max_yaw=10*deg;
-
-     if (abs(state_err[3])<max_yaw)
-         cmd(3)=0;
-     else if (abs(state_err[3])>0)
-          cmd(3)=state_err[3]/abs(state_err[3])*UNITSTEP/2;
-
-     ////ROS_INFO_STREAM("sig3 "<<cmd.transpose());
-
-         // MAKE ALT CONTROLLER SLAGGISH
-     cmd(2)*=UNITSTEP;
-
-     */
-
-
+     //UPDATE CMD BASED ON LYAP GAIN
+     Eigen::Vector4f cmd;
      for(int i(0);i<SIGNAL_SIZE;i++)
          cmd(i)= input_u[i];
 
-     double max_yaw=10*deg;
+     double max_yaw=5*deg;
      if (abs(state_err[3])<max_yaw)
          cmd(3)=0;
 
@@ -227,10 +193,8 @@ void controller::sensor_sub(){
      // RECORD STATE & CMD TO A TXT FILE
          for(int i(0);i<SIGNAL_SIZE;i++)
              input_u[i]=cmd(i);
-     //memcpy(input_u, cmd.data(), SIGNAL_SIZE * sizeof *cmd.data());
-//
 
-  ROS_INFO_STREAM("sig5 "<<cmd.transpose());
+        ROS_INFO_STREAM("sig5 "<<cmd.transpose());
 
      dataWrite();
 
@@ -273,59 +237,13 @@ void controller::sensor_sub(){
          converage.push_back(sqrt(error));
          stablizing=true;
 
-         resetController+=1;
+         resetController++;
          return true;
      }
          else
          return false;
  }
 
-//----------------------------------STORE PID GAIN-----------------------------------------------------------------
-void controller::wrtieGain(){
-
-    float a[STATE_SIZE];
-    for (int i(0);i<STATE_SIZE;i++)
-        a[i]=gain[i];
-    gain_write->fileName("pidtune",1);
-    gain_write->dataWrite(a,STATE_SIZE);
-}
-
-
-void controller::readGain(){
-
-//    if (!gain_write->read_pid_gain(gain,"pidtune"))
-//    {
-//        gain[0]=100*KpX;gain[2]=100*KpY;gain[4]=100*KpZ;gain[6]=100*KpS;
-//        gain[1]=100*KdX;gain[3]=100*KdY;gain[5]=100*KdZ;gain[7]=100*KdS;
-//        wrtieGain();
-//    }
-    gain[0]=KpX;gain[1]=KpY;gain[2]=KpZ;gain[3]=KpS;
-    gain[4]=KdX;gain[5]=KdY;gain[6]=KdZ;gain[7]=KdS;
-
-    //updateGain();
-    for(int i(0);i<4;i++)
-        for(int j(0);j<4;j++)
-            if(i==j){
-                kp(i,j)=gain[i];
-                kd(i,j)=gain[4+i];
-            }
-            else{
-                kp(i,j)=0;
-                kd(i,j)=0;
-            }
-
-    ROS_INFO_STREAM("Kp\n"<<kp);
-    ROS_INFO_STREAM("Kd\n"<<kd);
-
-
-}
-
-void controller::updateGain(){
-
-    kp<<gain[0]/100.00,0,0,0,0,gain[2]/100.00,0,0,0,0,gain[4]/100.00,0,0,0,0,gain[6]/100.00;
-    kd<<gain[1]/100.00,0,0,0,0,gain[3]/100.00,0,0,0,0,gain[5]/100.00,0,0,0,0,gain[7]/100.00;
-    debugger("pidtune gain update successfully");
-}
 
 //----------------------------------GUI COMMUNICATION and DATA LOG------------------------------------------------------------
 void controller::debugger(std::string ss){
@@ -356,29 +274,13 @@ void controller::dataWrite(){
 
 //----------------------------------SERVICES----------------------------------------------
 
-bool controller::gainchange(hextree::pidgain::Request  &req,
-         hextree::pidgain::Response &res)
-{
-    res.result=true;
-    switch(req.id){
-    case 1:gain[0]=req.P;gain[1]=req.D;debugger("roll gain updated");break;
-    case 2:gain[2]=req.P;gain[3]=req.D;debugger("pitch gain updated");break;
-    case 3:gain[4]=req.P;gain[5]=req.D;debugger("altd gain updated");break;
-    case 4:gain[6]=req.P;gain[7]=req.D;debugger("yaw gain updated");break;
-    case 5:wrtieGain();break;
-    }
-    sleep(1);
-    if(req.id<=4)
-    updateGain();
-    return true;
-}
 
 void controller::camCallback(const geometry_msgs::PoseConstPtr cam){
     vslam_count=getMS();
 }
 
 void controller::lyapCallback(const lyap_control::controller_msgConstPtr msg){
-    float factor[]={100,100,1000,1000};
+    float factor[]={100,100,100,-100};
     for(int i(0);i<SIGNAL_SIZE;i++)
         input_u[i]=msg->u[i]/factor[i];
 

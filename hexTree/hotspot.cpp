@@ -12,30 +12,56 @@ hotspot::hotspot()
     area_coverage=new coverage;
 
 }
+hotspot::~hotspot(){
+    delete tree;
+    delete area_coverage;
+
+}
 
 
 bool hotspot::talk(hextree::plannertalk::Request  &req,
          hextree::plannertalk::Response &res)
 {
+    debugger("SEEKER REQUEST ACCEPT");
+    sleep(1);
    if(req.option>3){
 
 
 
        switch(req.option){
-        case 4:
+        case 4:{
+
            debugger("SEEKER_1.20 ACTIVATED");
            findHotspot();
-           break;
-        case 5:
+           break;}
+        case 5:{
+
            debugger("SEEKER_1.20 SIMULATION");
            simulation();
-           break;
+           break;}
        }
        return true;
    }
      return (res.result=false);
 
 
+
+}
+
+void hotspot::callback_choice(const std_msgs::Int8ConstPtr msg)
+{
+    switch(msg->data){
+        case 4:{
+
+           debugger("SEEKER_1.20 ACTIVATED");
+           findHotspot();
+           break;}
+        case 5:{
+
+           debugger("SEEKER_1.20 SIMULATION");
+           simulation();
+           break;}
+       }
 
 }
 
@@ -47,6 +73,9 @@ void hotspot::run(){
     traj= nh_.advertise<geometry_msgs::PoseArray>("traj", 10);
     service = nh_.advertiseService("seeker/measurements",&hotspot::sensor_reading,this);
     mode = nh_.advertiseService("motionplan",&hotspot::talk,this);
+
+    gui_choice=nh_.subscribe("choice", 1, &hotspot::callback_choice,this);
+
     sleep(1);
     debugger("HEXTREE ENABLED");
 
@@ -306,7 +335,7 @@ void hotspot::optimal_path_publish(){
     for(int pathLength=50;pathLength<168;pathLength+=15){
         dp=new dpsolver;
         dp->input(item,weight,value,pathLength,solutionIndex );
-
+        delete dp;
         //find optimal sequence
         int cur=0;
         for (int j=0;j<item;j++)
@@ -314,6 +343,7 @@ void hotspot::optimal_path_publish(){
         if(cur==key)
             break;
         key=cur;
+
     }
 
 //    convert sequence to path

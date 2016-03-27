@@ -34,6 +34,7 @@ class stateEstimation
 {
 public:
     stateEstimation();
+    ~stateEstimation();
     void run();
 
     void navdataCb(const ardrone_autonomy::NavdataConstPtr navdataPtr);

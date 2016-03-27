@@ -23,7 +23,6 @@ MainWindow::MainWindow(QWidget *parent) :
     timer=new QTimer(this);
     connect(timer,SIGNAL(timeout()),this,SLOT(timeChanged()));
 
-    notificationDisplay("Welcome to JAIST QUAD gui!");
 
 
     //cpu usage initializer
@@ -44,6 +43,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tc->setChecked(true);
     ui->Cntrl->setChecked(true);
     QFile("/home/redwan/Desktop/data/log.csv").remove();
+    notificationDisplay("Welcome to JAIST QUAD gui!");
+
 
 
 }
@@ -168,12 +169,11 @@ void MainWindow::processInit()
     drone_thread=new ros_thread(this);
     sensor_subs=new ros_launch(this);
 
-    battery=0;
+    battery=displayCount=0;
     on_fly_status=false;
     moveit_enable=false;
 
     //enable debugging
-    client=n.serviceClient<hextree::pidgain>("pid_gains");
     test_obs_clinet=n.serviceClient<hextree::measurement>("threshold");
     calibration_client=n.serviceClient<hextree::measurement>("calibration");
     robot_client=n.serviceClient<hextree::obstacle>("localization");
@@ -232,6 +232,7 @@ void MainWindow::cameraInit(){
 
 void MainWindow::notificationDisplay(QString msg)
 {
+    if(msg.isEmpty())return;
     displayCount++;
     if(displayCount%6==0)
         notification="";
@@ -377,20 +378,32 @@ void MainWindow::sub_debug(QString msg){
 
 void MainWindow::on_button_motion_clicked()
 {
-    hextree::plannertalk srv;
-    if(ui->p2p->isChecked())
-        srv.request.option=1;
-    else if (ui->sb->isChecked())
-        srv.request.option=2;
-    else if (ui->ca->isChecked())
-        srv.request.option=3;
-    else if (ui->tc->isChecked()&&ui->experiment->isChecked())
-        srv.request.option=4;
-    else if (ui->tc->isChecked()&&ui->planning->isChecked())
-        srv.request.option=5;
+    int choice=0;
 
-    if (plannerclient.call(srv))
-        ROS_INFO_STREAM("plannerMotion is changed "<<srv.response);
+    if(ui->p2p->isChecked())
+        choice=1;
+    else if (ui->sb->isChecked())
+        choice=2;
+    else if (ui->ca->isChecked())
+        choice=3;
+    else if (ui->tc->isChecked()&&ui->experiment->isChecked())
+        choice=4;
+    else if (ui->tc->isChecked()&&ui->planning->isChecked())
+        choice=5;
+    if (choice<4){
+        hextree::plannertalk srv;
+        srv.request.option=choice;
+        if (plannerclient.call(srv))
+            ROS_INFO_STREAM("plannerMotion is changed "<<srv.response);
+    }
+    else{
+        //publish message to hextree
+
+        drone_thread->hextree_motion(choice);
+
+    }
+
+    notificationDisplay("choice "+ QString::number(choice));
 
 }
 
